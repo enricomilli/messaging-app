@@ -17,6 +17,7 @@ class Server {
         } else {
             writer.println("that command is not recognized");
         }
+
     }
 
     public static void main(String[] args) throws IOException {
@@ -30,7 +31,14 @@ class Server {
                     PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
                     Scanner in = new Scanner(socket.getInputStream());
 
-                    while (socket.isConnected()) {
+                    while (!socket.isClosed()) {
+
+                        if (!in.hasNextLine()) {
+                            in.close();
+                            System.out.println("client disconnected");
+                            break;
+                        }
+
                         String message = in.nextLine().trim();
                         if (message.isEmpty()) {
                             writer.println("make sure you write something!");
@@ -46,8 +54,6 @@ class Server {
                         }
 
                     }
-
-                    in.close();
 
                 }
 
