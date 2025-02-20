@@ -8,16 +8,21 @@ import java.util.Scanner;
 class Server {
     private static Integer port = 8080;
 
-    private static void handleCommands(Scanner in, PrintWriter writer, String command) {
+    private static void handleCommands(Scanner reader, PrintWriter writer, String command) {
 
         if (command.equals("/leave")) {
-            System.out.println("closing this client");
+            System.out.println("client disconnected");
             writer.println("bye bye!");
-            in.close();
+            reader.close();
         } else {
             writer.println("that command is not recognized");
         }
 
+    }
+
+    private String getCoordinatorMsg(ServerSocket listener) {
+
+        return "You are the coordinator!";
     }
 
     public static void main(String[] args) throws IOException {
@@ -27,30 +32,30 @@ class Server {
 
             while (true) {
                 try (Socket socket = listener.accept()) {
+                    InetAddress clientAddr = socket.getInetAddress();
 
                     PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                    Scanner in = new Scanner(socket.getInputStream());
+                    Scanner reader = new Scanner(socket.getInputStream());
+
+                    writer.println("connected! send a message anytime.");
 
                     while (!socket.isClosed()) {
 
-                        if (!in.hasNextLine()) {
-                            in.close();
+                        if (!reader.hasNextLine()) {
+                            reader.close();
                             System.out.println("client disconnected");
                             break;
                         }
 
-                        String message = in.nextLine().trim();
+                        String message = reader.nextLine().trim();
+
                         if (message.isEmpty()) {
                             writer.println("make sure you write something!");
-                            continue;
-                        }
-
-                        System.out.println("client message: '" + message + "'");
-                        writer.println("message received");
-
-                        if (message.startsWith("/")) {
-                            handleCommands(in, writer, message);
-                            continue;
+                        } else if (message.startsWith("/")) {
+                            handleCommands(reader, writer, message);
+                        } else {
+                            System.out.println("client message: '" + message + "'");
+                            writer.println("message received");
                         }
 
                     }
