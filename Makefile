@@ -2,23 +2,19 @@
 
 ARGS = -p 8080 -t 127.0.0.1 -i enrico
 
-server:
-	@echo "Starting server..."
-	@lsof -ti :8080 | xargs kill -9 2>/dev/null || true
-	while true; do \
-		java server/Server.java & \
-		fswatch -1 -E -i '\.java$$' -e '\.java~$$' server ; \
-		echo "Change detected, restarting server..."; \
-		lsof -ti :8080 | xargs kill -9 2>/dev/null || true; \
-		sleep 1; \
-	done
+build-server:
+	@javac server/*.java
+	@echo "Server built"
 
+server: build-server
+	@java -cp server Server
 
 build-client:
-	@cd client && javac Client.java FlagHandler.java
+	@javac client/*.java
+	@echo "Client built"
 
 client: build-client
-	@cd client && java Client $(ARGS)
+	@java -cp client Client $(ARGS)
 
 clean:
-	@rm -f client/*.class
+	@rm -f client/*.class && rm -f server/*.class

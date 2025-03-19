@@ -5,6 +5,10 @@ import java.util.Scanner;
 
 class Client {
 
+    // ANSI escape sequences for moving the cursor and clearing lines.
+    private static final String ANSI_UP_ONE = "\033[A";
+    private static final String ANSI_CLEAR_LINE = "\033[K";
+
     public static class ClientConfig {
         private String targetIp;
         private Integer port;
@@ -69,6 +73,17 @@ class Client {
         public String getErrorMessage() {
             return errorMessage;
         }
+
+    }
+
+    private static void handleServerMessage(String msg, String clientId, String clientMsg) {
+
+        if (msg.equals("MSG-CONFIRMED")) { // confirmation of message sent
+            // Move cursor up one line, go to begining of line, clear line, reprint
+            System.out.print(ANSI_UP_ONE + "\r" + ANSI_CLEAR_LINE + clientId + ": " + clientMsg + " ✓\n");
+        } else {
+            System.out.println(msg);
+        }
     }
 
     public static void main(String[] args) throws IOException {
@@ -83,25 +98,37 @@ class Client {
         System.out.println(
                 "Joining server at: " + client.getTargetIp() + ":" + client.getPort() + " as " + client.getId());
 
-        try (Socket socket = new Socket(client.targetIp, client.port)) {
+        try (Socket socket = new Socket(client.getTargetIp(), client.getPort())) {
 
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             Scanner server = new Scanner(socket.getInputStream());
             Scanner input = new Scanner(System.in);
 
-            while (!socket.isClosed()) {
-                if (!server.hasNextLine()) {
-                    server.close();
-                    input.close();
-                    break;
-                }
-
+            if (server.hasNextLine()) {
                 String serverRes = server.nextLine();
                 System.out.println(serverRes);
+            }
 
-                System.out.print(client.getId() + ": ");
-                String message = input.nextLine();
-                writer.println(message);
+            while (socket.isConnected() && !socket.isClosed()) {
+                // user messag prompt
+
+                String message = "";
+                if (socket.isConnected()) {
+                    System.out.print(client.getId() + ": ");
+                    message = input.nextLine();
+                }
+
+                // send message to the server
+                writer.println(client.getId() + ":" + message);
+
+                // wait for response
+                if (server.hasNextLine()) {
+                    String serverRes = server.nextLine();
+                    handleServerMessage(serverRes, client.getId(), message);
+                } else {
+                    System.out.println("Lost connection to server");
+                    break;
+                }
             }
 
             input.close();
