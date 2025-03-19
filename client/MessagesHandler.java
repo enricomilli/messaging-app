@@ -28,6 +28,7 @@ class MessagesHandler implements Runnable {
 
             if (newUserMsg.startsWith(client.getId() + ":")) {
                 newUserMsg = newUserMsg.replaceFirst(client.getId() + ": ", "you: ");
+                return;
             }
 
             this.messagePrinter.printMessage(newUserMsg);
