@@ -50,9 +50,9 @@ class Client {
         }
 
         System.out.println(
-                "Joining server at: " + client.getTargetIp() + ":" + client.getPort() + " as " + client.getId());
+                "Joining server at: " + client.getTargetIp() + ":" + client.getTargetPort() + " as " + client.getId());
 
-        try (Socket socket = new Socket(client.getTargetIp(), client.getPort())) {
+        try (Socket socket = new Socket(client.getTargetIp(), client.getTargetPort())) {
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             Scanner server = new Scanner(socket.getInputStream());
             Console console = System.console();

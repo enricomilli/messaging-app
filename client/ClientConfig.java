@@ -52,7 +52,7 @@ class ClientConfig {
         return targetIp;
     }
 
-    public Integer getPort() {
+    public Integer getTargetPort() {
         return port;
     }
 
