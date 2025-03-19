@@ -1,88 +1,42 @@
+import java.io.Console;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
 class Client {
+    private static final String MOVE_TO_LINE_START = "\r";
+    private static final String CLEAR_LINE = "\033[2K";
 
-    // ANSI escape sequences for moving the cursor and clearing lines.
-    private static final String ANSI_UP_ONE = "\033[A";
-    private static final String ANSI_CLEAR_LINE = "\033[K";
+    private static String readConsoleInput(Console console, String userId, InputBuffer inputBuffer) {
+        StringBuilder input = new StringBuilder();
+        System.out.print(userId + ": ");
 
-    public static class ClientConfig {
-        private String targetIp;
-        private Integer port;
-        private String id;
-        private String errorMessage;
+        while (true) {
+            try {
+                char c = (char) System.in.read();
 
-        private ClientConfig(String targetIp, Integer port, String id, String errorMessage) {
-            this.targetIp = targetIp;
-            this.port = port;
-            this.id = id;
-            this.errorMessage = errorMessage;
-        }
-
-        public static ClientConfig build(FlagHandler flagHandler) {
-            String targetIp = null;
-            Integer port = null;
-            String id = null;
-            String errorMessage = "";
-
-            if (flagHandler.hasFlag("target-ip")) {
-                targetIp = flagHandler.getValue("target-ip");
-            } else {
-                errorMessage += "IP address is required\n";
-            }
-
-            if (flagHandler.hasFlag("port")) {
-                String portStr = flagHandler.getValue("port");
-                try {
-                    port = Integer.parseInt(portStr);
-                } catch (NumberFormatException e) {
-                    errorMessage = "Invalid port number: " + port;
+                if (c == '\n' || c == '\r') {
+                    String result = input.toString();
+                    input.setLength(0);
+                    return result;
+                } else if (c == 127 || c == 8) { // Backspace
+                    if (input.length() > 0) {
+                        input.deleteCharAt(input.length() - 1);
+                        System.out.print("\b \b"); // Move back, print space, move back again
+                    }
+                } else {
+                    input.append(c);
+                    System.out.print(c);
                 }
-            } else {
-                errorMessage += "Port is required\n";
+
+                // Update the input buffer
+                inputBuffer.setCurrentInput(input.toString());
+
+            } catch (IOException e) {
+                System.err.println("Error reading input: " + e.getMessage());
+                return null;
             }
-
-            if (flagHandler.hasFlag("id")) {
-                id = flagHandler.getValue("id");
-            } else {
-                id = "default_id";
-            }
-
-            if (!errorMessage.isEmpty()) {
-                return new ClientConfig(null, null, null, errorMessage);
-            }
-
-            return new ClientConfig(targetIp, port, id, null);
-        }
-
-        public String getTargetIp() {
-            return targetIp;
-        }
-
-        public Integer getPort() {
-            return port;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public String getErrorMessage() {
-            return errorMessage;
-        }
-
-    }
-
-    private static void handleServerMessage(String msg, String clientId, String clientMsg) {
-
-        if (msg.equals("MSG-CONFIRMED")) { // confirmation of message sent
-            // Move cursor up one line, go to begining of line, clear line, reprint
-            System.out.print(ANSI_UP_ONE + "\r" + ANSI_CLEAR_LINE + clientId + ": " + clientMsg + " ✓\n");
-        } else {
-            System.out.println(msg);
         }
     }
 
@@ -99,39 +53,49 @@ class Client {
                 "Joining server at: " + client.getTargetIp() + ":" + client.getPort() + " as " + client.getId());
 
         try (Socket socket = new Socket(client.getTargetIp(), client.getPort())) {
-
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             Scanner server = new Scanner(socket.getInputStream());
-            Scanner input = new Scanner(System.in);
+            Console console = System.console();
 
-            if (server.hasNextLine()) {
-                String serverRes = server.nextLine();
-                System.out.println(serverRes);
-            }
+            // If console is not available, fall back to Scanner
+            Scanner input = (console == null) ? new Scanner(System.in) : null;
 
-            while (socket.isConnected() && !socket.isClosed()) {
-                // user messag prompt
+            // Create a shared buffer to store current input
+            InputBuffer inputBuffer = new InputBuffer();
 
-                String message = "";
-                if (socket.isConnected()) {
+            // Create message printer with input buffer
+            MessagePrinter messagePrinter = new MessagePrinter(client.getId(), inputBuffer);
+
+            // live messages chat
+            Thread messagesHandler = new Thread(new MessagesHandler(socket, server, client, messagePrinter));
+            messagesHandler.start();
+
+            while (!socket.isClosed()) {
+                String message;
+                if (console != null) {
+                    // Using console for better input handling
+                    message = readConsoleInput(console, client.getId(), inputBuffer);
+                } else {
+                    // Fallback to Scanner
                     System.out.print(client.getId() + ": ");
                     message = input.nextLine();
                 }
 
-                // send message to the server
-                writer.println(client.getId() + ":" + message);
+                if (message != null && !message.trim().isEmpty()) {
+                    // Clear the input line
+                    System.out.print(MOVE_TO_LINE_START + CLEAR_LINE);
 
-                // wait for response
-                if (server.hasNextLine()) {
-                    String serverRes = server.nextLine();
-                    handleServerMessage(serverRes, client.getId(), message);
-                } else {
-                    System.out.println("Lost connection to server");
-                    break;
+                    // Reset buffer
+                    inputBuffer.setCurrentInput("");
+
+                    // send message to the server
+                    writer.println(client.getId() + ": " + message);
                 }
             }
 
-            input.close();
+            if (input != null) {
+                input.close();
+            }
             server.close();
         }
     }
