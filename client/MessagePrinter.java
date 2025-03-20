@@ -1,4 +1,9 @@
-
+/**
+ * MessagePrinter handles printing incoming messages while
+ * scrolling the user input so that it stays with the most
+ * recent message
+ * 
+ */
 class MessagePrinter {
     private final String userId;
     private final InputBuffer inputBuffer;

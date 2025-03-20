@@ -1,6 +1,10 @@
 import java.net.Socket;
 import java.util.Scanner;
 
+/**
+ * MessagesHandler contains the logic for printing out
+ * messages received from the server
+ */
 class MessagesHandler implements Runnable {
     private final Scanner server;
     private final ClientConfig client;

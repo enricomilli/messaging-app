@@ -1,4 +1,8 @@
-
+/**
+ * InputBuffer handles storing the user input
+ * while they have not sent out the message (input state)
+ *
+ */
 class InputBuffer {
     private volatile String currentInput = "";
 
