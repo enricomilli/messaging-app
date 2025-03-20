@@ -21,14 +21,25 @@ class MessagesHandler implements Runnable {
     // prefixes sent by the server are handled here
     private void handleServerMessage(String msg, String clientId) {
 
-        if (msg.startsWith("MSG-FROM-CHAT")) { // server sends down new messages from the chat with this prefix
-
+        if (msg.startsWith("MSG-FROM-CHAT")) { // server sends down new chats with this prefix
             String newUserMsg = msg.replaceFirst("MSG-FROM-CHAT", "");
             if (newUserMsg.startsWith(client.getId() + ":")) {
                 return;
             }
 
             this.messagePrinter.printMessage(newUserMsg);
+
+        } else if (msg.startsWith("MSG-FROM-USER")) {
+            // private message from a user goes here
+            this.messagePrinter.printMessage("Private messaged received from username: message");
+
+        } else if (msg.startsWith("MSG-FROM-COORDINATOR")) {
+            // messages from the coordinator
+
+        } else if (msg.startsWith("MSG-FROM-SERVER")) {
+            // messages from the server
+            String serverMsg = msg.replaceFirst("MSG-FROM-SERVER", "");
+            this.messagePrinter.printMessage(serverMsg);
 
         } else {
             this.messagePrinter.printMessage(msg);

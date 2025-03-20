@@ -40,6 +40,21 @@ class Client {
         }
     }
 
+    private static String checkUsernameAvailability(PrintWriter writer, Scanner server, String username) {
+
+        writer.println("client:CHECK-USERNAME:" + username);
+        String response = server.nextLine();
+
+        System.out.println("response from check username: " + response);
+
+        if (response.equals("available")) {
+            return null;
+        } else {
+            return response;
+        }
+
+    }
+
     public static void main(String[] args) throws IOException {
         FlagHandler flagHandler = new FlagHandler(args);
 
@@ -52,7 +67,8 @@ class Client {
         System.out.println(
                 "Joining server at: " + client.getTargetIp() + ":" + client.getTargetPort() + " as " + client.getId());
 
-        try (Socket socket = new Socket(client.getTargetIp(), client.getTargetPort())) {
+        try {
+            Socket socket = new Socket(client.getTargetIp(), client.getTargetPort());
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             Scanner server = new Scanner(socket.getInputStream());
             Console console = System.console();
@@ -69,6 +85,16 @@ class Client {
             // live messages chat
             Thread messagesHandler = new Thread(new MessagesHandler(socket, server, client, messagePrinter));
             messagesHandler.start();
+
+            // String usernameErr = checkUsernameAvailability(writer, server,
+            // client.getId());
+            // if (usernameErr != null) {
+            // System.out.println(usernameErr);
+            // socket.close();
+            // writer.close();
+            // server.close();
+            // return;
+            // }
 
             while (!socket.isClosed()) {
                 String message;
@@ -89,7 +115,7 @@ class Client {
                     inputBuffer.setCurrentInput("");
 
                     // send message to the server
-                    writer.println(client.getId() + ": " + message);
+                    writer.println("user:" + client.getId() + ": " + message);
                 }
             }
 
@@ -97,6 +123,8 @@ class Client {
                 input.close();
             }
             server.close();
+        } catch (Error err) {
+            System.out.println("error running client: " + err);
         }
     }
 }

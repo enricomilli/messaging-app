@@ -1,3 +1,4 @@
+import java.util.UUID;
 
 class ClientConfig {
     private String targetIp;
@@ -37,8 +38,11 @@ class ClientConfig {
 
         if (flagHandler.hasFlag("id")) {
             id = flagHandler.getValue("id");
+
         } else {
-            id = "default_id";
+            // generate unique id here
+            id = UUID.randomUUID().toString();
+            System.out.println("user id randomly assigned: " + id);
         }
 
         if (!errorMessage.isEmpty()) {
