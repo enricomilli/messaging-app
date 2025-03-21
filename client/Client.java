@@ -58,12 +58,12 @@ class Client {
             Socket socket = new Socket(client.getTargetIp(), client.getTargetPort());
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             Scanner server = new Scanner(socket.getInputStream());
-            setUpKeymaps(socket, writer, server);
-
-            // If console is not available, fall back to Scanner
             Scanner input = new Scanner(System.in);
 
-            // Create message printer with input buffer
+            // map ctrl-c for controled exit
+            setUpKeymaps(socket, writer, server);
+
+            // Use messagePrinter to keep the input in front of all messages
             MessagePrinter messagePrinter = new MessagePrinter(client.getId());
 
             String usernameErr = checkUsernameAvailability(writer, server, client.getId());
@@ -75,8 +75,9 @@ class Client {
             }
 
             // live messages chat
-            Thread messagesHandler = new Thread(new MessagesHandler(socket, server, client, messagePrinter));
-            messagesHandler.start();
+            MessagesHandler messagesHandler = new MessagesHandler(socket, server, client, messagePrinter);
+            Thread messagesHandlerThread = new Thread(messagesHandler);
+            messagesHandlerThread.start();
 
             while (!socket.isClosed()) {
                 String message;
