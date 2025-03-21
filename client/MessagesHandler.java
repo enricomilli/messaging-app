@@ -36,6 +36,9 @@ class MessagesHandler implements Runnable {
         } else if (msg.startsWith("MSG-FROM-COORDINATOR")) {
             // messages from the coordinator
 
+        } else if (msg.startsWith("MSG-TO-COORDINATOR")) {
+            // messages only to the coordinator
+
         } else if (msg.startsWith("MSG-FROM-SERVER")) {
             // messages from the server
             String serverMsg = msg.replaceFirst("MSG-FROM-SERVER", "");

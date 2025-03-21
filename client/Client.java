@@ -2,6 +2,8 @@ import java.io.Console;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 import java.util.Scanner;
 
 class Client {
@@ -40,7 +42,27 @@ class Client {
         }
     }
 
+    private static void setUpKeymaps(Socket socket, PrintWriter writer, Scanner server) {
+        Signal.handle(new Signal("INT"), new SignalHandler() {
+            public void handle(Signal sig) {
+                System.out.println("\nExiting chat");
+
+                try {
+                    socket.close();
+                } catch (Exception err) {
+                    System.out.println("error closing socket: " + socket);
+                }
+
+                writer.close();
+                server.close();
+                System.exit(0);
+            }
+        });
+    }
+
     private static String checkUsernameAvailability(PrintWriter writer, Scanner server, String username) {
+
+        System.out.println("sending out check username msg");
 
         writer.println("client:CHECK-USERNAME:" + username);
         String response = server.nextLine();
@@ -72,6 +94,7 @@ class Client {
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             Scanner server = new Scanner(socket.getInputStream());
             Console console = System.console();
+            setUpKeymaps(socket, writer, server);
 
             // If console is not available, fall back to Scanner
             Scanner input = (console == null) ? new Scanner(System.in) : null;
@@ -82,19 +105,18 @@ class Client {
             // Create message printer with input buffer
             MessagePrinter messagePrinter = new MessagePrinter(client.getId(), inputBuffer);
 
+            String usernameErr = checkUsernameAvailability(writer, server, client.getId());
+            if (usernameErr != null) {
+                System.out.println("error joining: " + usernameErr);
+                socket.close();
+                writer.close();
+                server.close();
+                return;
+            }
+
             // live messages chat
             Thread messagesHandler = new Thread(new MessagesHandler(socket, server, client, messagePrinter));
             messagesHandler.start();
-
-            // String usernameErr = checkUsernameAvailability(writer, server,
-            // client.getId());
-            // if (usernameErr != null) {
-            // System.out.println(usernameErr);
-            // socket.close();
-            // writer.close();
-            // server.close();
-            // return;
-            // }
 
             while (!socket.isClosed()) {
                 String message;
@@ -116,6 +138,10 @@ class Client {
 
                     // send message to the server
                     writer.println("user:" + client.getId() + ": " + message);
+                } else {
+                    messagePrinter.printMessage("make sure you write something!");
+                    System.out.print(MOVE_TO_LINE_START + CLEAR_LINE);
+
                 }
             }
 

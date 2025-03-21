@@ -13,10 +13,27 @@ class UserListMap {
     }
 
     public UserInfo removeUser(String username) {
+        if (username == null || username.trim() == "") {
+            return null;
+        }
+
         return userMap.remove(username);
     }
 
     public UserInfo getUser(String username) {
         return userMap.get(username);
+    }
+
+    public Integer size() {
+        return userMap.size();
+    }
+
+    public void print() {
+
+        System.out.println("User list:");
+
+        userMap.forEach((key, value) -> {
+            System.out.println("  " + key);
+        });
     }
 }

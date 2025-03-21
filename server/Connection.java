@@ -2,25 +2,22 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Connection implements Runnable, MessagesList.MessageListener {
     private final Socket socket;
     private final MessagesList messagesList;
     private final PrintWriter writer;
     private final Scanner reader;
-    private AtomicInteger numOfConnections;
     private UserListMap userList;
+    private String currentUser;
 
-    public Connection(Socket socket, MessagesList messagesList, AtomicInteger numOfConnections, UserListMap userList)
+    public Connection(Socket socket, MessagesList messagesList, UserListMap userList)
             throws IOException {
         this.socket = socket;
         this.messagesList = messagesList;
         this.writer = new PrintWriter(socket.getOutputStream(), true);
         this.reader = new Scanner(socket.getInputStream());
         this.userList = userList;
-        this.numOfConnections = numOfConnections;
-        this.numOfConnections.incrementAndGet();
     }
 
     private void handleUserMessages(String msg)
@@ -66,6 +63,9 @@ public class Connection implements Runnable, MessagesList.MessageListener {
 
         if (command.equals("CHECK-USERNAME")) {
             UserListMap.UserInfo exisitingUser = userList.getUser(value);
+            userList.print();
+
+            System.out.println("checking if username: " + value + " is taken");
             if (exisitingUser == null) {
                 writer.println("available");
 
@@ -77,7 +77,7 @@ public class Connection implements Runnable, MessagesList.MessageListener {
     }
 
     private void closeConnection() throws IOException {
-        this.numOfConnections.decrementAndGet();
+        this.userList.removeUser(currentUser);
         this.writer.close();
         this.reader.close();
         this.socket.close();
@@ -92,14 +92,61 @@ public class Connection implements Runnable, MessagesList.MessageListener {
         writer.println(prefix + msg);
     }
 
+    private String handleNewUser() {
+        System.out.println("handling new user");
+        if (socket.isClosed()) {
+            return "socket is closed";
+        }
+
+        // step 1:
+        // check the username
+        String usernameCheckMsg = reader.nextLine();
+        String[] checkMsgParts = usernameCheckMsg.split(":", 3);
+        if (checkMsgParts.length < 3) {
+            return "username check in wrong format";
+        }
+
+        String username = checkMsgParts[2];
+        if (username == null || username.trim().isEmpty()) {
+            return "username is empty";
+        }
+
+        if (userList.getUser(username) != null) {
+            return "username exists";
+        }
+
+        currentUser = username;
+
+        // step 2:
+        // get client details
+        String ipAddr = socket.getInetAddress().getHostAddress();
+        Integer port = socket.getPort();
+
+        // check if coordinator
+        Boolean isCoordinator = false;
+        if (userList.size() < 2) {
+            isCoordinator = true;
+        }
+
+        // step 3:
+        // add to the user list
+        userList.addUser(username, ipAddr, port, isCoordinator);
+
+        return null;
+    }
+
     public void run() {
         try {
             messagesList.addListener(this);
-            writer.println("connected! send a message anytime.");
 
-            if (this.numOfConnections.get() == 1) {
-                sendMessageWithPrefix("MSG-TO-COORDINATOR", "your are the coordinator");
+            String newUserErr = handleNewUser();
+            if (newUserErr != null) {
+                writer.println(newUserErr);
+                closeConnection();
+                return;
             }
+            // confirm with client this user can join
+            writer.println("available");
 
             while (!socket.isClosed() && reader.hasNext()) {
 
@@ -119,6 +166,8 @@ public class Connection implements Runnable, MessagesList.MessageListener {
                 }
 
             }
+
+            closeConnection();
 
         } catch (IOException err) {
             System.err.println("error with client connection:" + err);

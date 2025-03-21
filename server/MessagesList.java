@@ -14,12 +14,12 @@ class MessagesList {
     public void addListener(MessageListener listener) {
         listeners.add(listener);
 
-        // Send existing messages to new listener
-        synchronized (messages) {
-            for (String message : messages) {
-                listener.onNewMessage(message);
-            }
-        }
+        // Uncomment to send all the previous messages to joining clients
+        // synchronized (messages) {
+        // for (String message : messages) {
+        // listener.onNewMessage(message);
+        // }
+        // }
     }
 
     public void removeListener(MessageListener listener) {
