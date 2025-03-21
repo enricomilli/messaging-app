@@ -27,11 +27,11 @@ class MessagesHandler implements Runnable {
                 return;
             }
 
-            this.messagePrinter.printMessage(newUserMsg);
+            messagePrinter.printMessage(newUserMsg);
 
         } else if (msg.startsWith("MSG-FROM-USER")) {
             // private message from a user goes here
-            this.messagePrinter.printMessage("Private messaged received from username: message");
+            messagePrinter.printMessage("Private messaged received from username: message");
 
         } else if (msg.startsWith("MSG-FROM-COORDINATOR")) {
             // messages from the coordinator
@@ -42,27 +42,33 @@ class MessagesHandler implements Runnable {
         } else if (msg.startsWith("MSG-FROM-SERVER")) {
             // messages from the server
             String serverMsg = msg.replaceFirst("MSG-FROM-SERVER", "");
-            this.messagePrinter.printMessage(serverMsg);
+            messagePrinter.printMessage(serverMsg);
 
         } else {
-            this.messagePrinter.printMessage(msg);
+            messagePrinter.printMessage(msg);
         }
     }
 
     public void run() {
-        while (!this.socket.isClosed()) {
+        try {
 
-            // wait for response
-            if (this.server.hasNextLine()) {
-                String serverRes = server.nextLine();
-                handleServerMessage(serverRes, this.client.getId());
+            while (!this.socket.isClosed()) {
 
-            } else {
-                System.out.println("Lost connection to server");
-                break;
+                // wait for response
+                if (this.server.hasNextLine()) {
+                    String serverRes = server.nextLine();
+                    handleServerMessage(serverRes, this.client.getId());
+
+                } else {
+                    System.out.println("Lost connection to server");
+                    socket.close();
+                    break;
+                }
 
             }
 
+        } catch (Exception err) {
+            System.out.println("error in message handler: " + err);
         }
 
     }

@@ -1,4 +1,3 @@
-import java.io.Console;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -10,64 +9,20 @@ class Client {
     private static final String MOVE_TO_LINE_START = "\r";
     private static final String CLEAR_LINE = "\033[2K";
 
-    private static String readConsoleInput(Console console, String userId, InputBuffer inputBuffer) {
-        StringBuilder input = new StringBuilder();
-        System.out.print(userId + ": ");
-
-        while (true) {
-            try {
-                char c = (char) System.in.read();
-
-                if (c == '\n' || c == '\r') {
-                    String result = input.toString();
-                    input.setLength(0);
-                    return result;
-                } else if (c == 127 || c == 8) { // Backspace
-                    if (input.length() > 0) {
-                        input.deleteCharAt(input.length() - 1);
-                        System.out.print("\b \b"); // Move back, print space, move back again
-                    }
-                } else {
-                    input.append(c);
-                    System.out.print(c);
-                }
-
-                // Update the input buffer
-                inputBuffer.setCurrentInput(input.toString());
-
-            } catch (IOException e) {
-                System.err.println("Error reading input: " + e.getMessage());
-                return null;
-            }
-        }
-    }
-
     private static void setUpKeymaps(Socket socket, PrintWriter writer, Scanner server) {
         Signal.handle(new Signal("INT"), new SignalHandler() {
             public void handle(Signal sig) {
                 System.out.println("\nExiting chat");
 
-                try {
-                    socket.close();
-                } catch (Exception err) {
-                    System.out.println("error closing socket: " + socket);
-                }
-
-                writer.close();
-                server.close();
+                closeConnection(socket, server, writer);
                 System.exit(0);
             }
         });
     }
 
     private static String checkUsernameAvailability(PrintWriter writer, Scanner server, String username) {
-
-        System.out.println("sending out check username msg");
-
         writer.println("client:CHECK-USERNAME:" + username);
         String response = server.nextLine();
-
-        System.out.println("response from check username: " + response);
 
         if (response.equals("available")) {
             return null;
@@ -75,6 +30,16 @@ class Client {
             return response;
         }
 
+    }
+
+    private static void closeConnection(Socket socket, Scanner server, PrintWriter writer) {
+        try {
+            socket.close();
+        } catch (Exception err) {
+            System.out.println("error closing socket: " + socket);
+        }
+        server.close();
+        writer.close();
     }
 
     public static void main(String[] args) throws IOException {
@@ -93,24 +58,19 @@ class Client {
             Socket socket = new Socket(client.getTargetIp(), client.getTargetPort());
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             Scanner server = new Scanner(socket.getInputStream());
-            Console console = System.console();
             setUpKeymaps(socket, writer, server);
 
             // If console is not available, fall back to Scanner
-            Scanner input = (console == null) ? new Scanner(System.in) : null;
-
-            // Create a shared buffer to store current input
-            InputBuffer inputBuffer = new InputBuffer();
+            Scanner input = new Scanner(System.in);
 
             // Create message printer with input buffer
-            MessagePrinter messagePrinter = new MessagePrinter(client.getId(), inputBuffer);
+            MessagePrinter messagePrinter = new MessagePrinter(client.getId());
 
             String usernameErr = checkUsernameAvailability(writer, server, client.getId());
             if (usernameErr != null) {
                 System.out.println("error joining: " + usernameErr);
-                socket.close();
-                writer.close();
-                server.close();
+                closeConnection(socket, server, writer);
+                input.close();
                 return;
             }
 
@@ -120,35 +80,25 @@ class Client {
 
             while (!socket.isClosed()) {
                 String message;
-                if (console != null) {
-                    // Using console for better input handling
-                    message = readConsoleInput(console, client.getId(), inputBuffer);
-                } else {
-                    // Fallback to Scanner
-                    System.out.print(client.getId() + ": ");
-                    message = input.nextLine();
-                }
+                System.out.print(client.getId() + ": ");
 
+                // waits here till user presses enter
+                message = input.nextLine();
                 if (message != null && !message.trim().isEmpty()) {
                     // Clear the input line
                     System.out.print(MOVE_TO_LINE_START + CLEAR_LINE);
-
-                    // Reset buffer
-                    inputBuffer.setCurrentInput("");
 
                     // send message to the server
                     writer.println("user:" + client.getId() + ": " + message);
                 } else {
                     messagePrinter.printMessage("make sure you write something!");
                     System.out.print(MOVE_TO_LINE_START + CLEAR_LINE);
-
                 }
+
             }
 
-            if (input != null) {
-                input.close();
-            }
-            server.close();
+            closeConnection(socket, server, writer);
+            input.close();
         } catch (Error err) {
             System.out.println("error running client: " + err);
         }
