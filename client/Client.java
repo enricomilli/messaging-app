@@ -20,11 +20,13 @@ class Client {
         });
     }
 
-    private static String checkUsernameAvailability(PrintWriter writer, Scanner server, String username) {
+    private static String checkUsernameAvailability(PrintWriter writer, Scanner server, MessagePrinter messagePrinter,
+            String username) {
         writer.println("client:CHECK-USERNAME:" + username);
         String response = server.nextLine();
 
-        if (response.equals("available")) {
+        if (response.equals("confirmation")) {
+            messagePrinter.printMessage("Successfully joined!");
             return null;
         } else {
             return response;
@@ -50,8 +52,10 @@ class Client {
             System.out.println("Error occurred: \n" + client.getErrorMessage());
             return;
         }
+        // Use messagePrinter to keep the input in front of all messages
+        MessagePrinter messagePrinter = new MessagePrinter(client.getId());
 
-        System.out.println(
+        messagePrinter.printMessage(
                 "Joining server at: " + client.getTargetIp() + ":" + client.getTargetPort() + " as " + client.getId());
 
         try {
@@ -63,10 +67,7 @@ class Client {
             // map ctrl-c for controled exit
             setUpKeymaps(socket, writer, server);
 
-            // Use messagePrinter to keep the input in front of all messages
-            MessagePrinter messagePrinter = new MessagePrinter(client.getId());
-
-            String usernameErr = checkUsernameAvailability(writer, server, client.getId());
+            String usernameErr = checkUsernameAvailability(writer, server, messagePrinter, client.getId());
             if (usernameErr != null) {
                 System.out.println("error joining: " + usernameErr);
                 closeConnection(socket, server, writer);
@@ -81,7 +82,8 @@ class Client {
 
             while (!socket.isClosed()) {
                 String message;
-                System.out.print(client.getId() + ": ");
+                // System.out.print(client.getId() + ": ");
+                messagePrinter.printMessage("\033[A");
 
                 // waits here till user presses enter
                 message = input.nextLine();

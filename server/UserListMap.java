@@ -10,6 +10,9 @@ class UserListMap {
 
     public void addUser(String username, String ip, Integer port, Boolean isCoordinator) {
         userMap.put(username, new UserInfo(ip, port, isCoordinator));
+
+        // print();
+        // System.out.println("size of list: " + size());
     }
 
     public UserInfo removeUser(String username) {

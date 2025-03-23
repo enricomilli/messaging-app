@@ -9,6 +9,10 @@ class MessagesList {
 
     public interface MessageListener {
         void onNewMessage(String message);
+
+        void onNewCommand(String command);
+
+        Boolean isCoordinator();
     }
 
     public void addListener(MessageListener listener) {
@@ -26,7 +30,20 @@ class MessagesList {
         listeners.remove(listener);
     }
 
+    public void addCommand(String command, String ip, Integer port) {
+
+        synchronized (messages) {
+            // The notify the coordinator of new command
+            for (MessageListener listener : listeners) {
+                if (listener.isCoordinator()) {
+                    listener.onNewCommand(command);
+                }
+            }
+        }
+    }
+
     public void addMessage(String message) {
+
         synchronized (messages) {
             messages.add(message);
             // Notify all listeners
