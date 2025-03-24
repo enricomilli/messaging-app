@@ -3,9 +3,9 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Connection implements Runnable, MessagesList.MessageListener {
+public class Connection implements Runnable, MessagesCoordinator.MessageListener {
     private final Socket socket;
-    private final MessagesList messagesList;
+    private final MessagesCoordinator messagesCoordinator;
     private final PrintWriter writer;
     private final Scanner reader;
     private UserListMap userList;
@@ -13,11 +13,12 @@ public class Connection implements Runnable, MessagesList.MessageListener {
     private Integer userPort;
     private String userIp;
     private Boolean isCoordinator = false;
+    private Coordinator coordinator;
 
-    public Connection(Socket socket, MessagesList messagesList, UserListMap userList)
+    public Connection(Socket socket, MessagesCoordinator messagesCoordinator, UserListMap userList)
             throws IOException {
         this.socket = socket;
-        this.messagesList = messagesList;
+        this.messagesCoordinator = messagesCoordinator;
         this.writer = new PrintWriter(socket.getOutputStream(), true);
         this.reader = new Scanner(socket.getInputStream());
         this.userList = userList;
@@ -26,6 +27,16 @@ public class Connection implements Runnable, MessagesList.MessageListener {
     public Boolean isCoordinator() {
         return this.isCoordinator;
     }
+
+    public void makeCoordinator() {
+        this.isCoordinator = true;
+        this.coordinator = new Coordinator(userList, messagesCoordinator);
+    }
+
+    public Boolean matchesAddress(String ip, Integer port) {
+        return this.userIp.equals(ip) && this.userPort.equals(port);
+    }
+
 
     private void handleUserMessages(String msg)
             throws IOException {
@@ -43,8 +54,8 @@ public class Connection implements Runnable, MessagesList.MessageListener {
 
         } else { // the message is broadcasted
 
-            // messagesList automatically adds MSG-FROM-CHAT prefix
-            messagesList.addMessage(username + ": " + userMsg);
+            // messagesCoordinator automatically adds MSG-FROM-CHAT prefix
+            messagesCoordinator.addMessage(username + ": " + userMsg);
         }
 
     }
@@ -59,7 +70,9 @@ public class Connection implements Runnable, MessagesList.MessageListener {
                 System.out.println("error executing leave command" + err);
             }
         } else if (userMsg.startsWith("/list")) {
-            messagesList.addCommand("/list", userIp, userPort);
+            System.out.println("handling list command");
+            // make coordinator handle command
+            messagesCoordinator.addCommand("/list", userIp, userPort);
         }
 
     }
@@ -98,7 +111,9 @@ public class Connection implements Runnable, MessagesList.MessageListener {
     }
 
     // if this is the coordinator, this function handles commands from users
-    public void onNewCommand(String command) {
+    public void onNewCommand(String requestIp, Integer requestPort, String command) {
+
+        coordinator.handleCommand(requestIp, requestPort, command);
 
     }
 
@@ -140,7 +155,7 @@ public class Connection implements Runnable, MessagesList.MessageListener {
 
         // check if coordinator
         if (userList.size() < 1) { // if there are no users in the list, its the first person to join
-            this.isCoordinator = true;
+            this.makeCoordinator();
         }
 
         // step 3:
@@ -152,7 +167,7 @@ public class Connection implements Runnable, MessagesList.MessageListener {
 
     public void run() {
         try {
-            messagesList.addListener(this);
+            messagesCoordinator.addListener(this);
 
             String newUserErr = handleNewUser();
             if (newUserErr != null) {
@@ -164,7 +179,7 @@ public class Connection implements Runnable, MessagesList.MessageListener {
             // confirm with client this user can join
             writer.println("confirmation");
 
-            messagesList.addMessage("[Server] " + userId + " has joined the chat.");
+            messagesCoordinator.addMessage("[Server] " + userId + " has joined the chat.");
 
             if (isCoordinator) {
                 sendMessageWithPrefix("MSG-TO-COORDINATOR", "You are the coordinator");
@@ -195,7 +210,7 @@ public class Connection implements Runnable, MessagesList.MessageListener {
                 System.out.println("need to get new coordinator");
             }
 
-            messagesList.addMessage("[Server] " + userId + " has left the chat.");
+            messagesCoordinator.addMessage("[Server] " + userId + " has left the chat.");
             closeConnection();
 
         } catch (IOException err) {

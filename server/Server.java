@@ -5,7 +5,7 @@ import java.net.Socket;
 
 class Server {
     private static Integer port = 8080;
-    private static final MessagesList messagesList = new MessagesList();
+    private static final MessagesCoordinator messagesCoordinator = new MessagesCoordinator();
     private static final UserListMap userList = new UserListMap();
 
     public static void main(String[] args) throws IOException {
@@ -16,7 +16,7 @@ class Server {
             while (true) {
                 try {
                     Socket socket = listener.accept();
-                    Connection conn = new Connection(socket, messagesList, userList);
+                    Connection conn = new Connection(socket, messagesCoordinator, userList);
                     Thread connectionHandler = new Thread(conn);
                     connectionHandler.start();
 

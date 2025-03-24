@@ -27,6 +27,17 @@ class UserListMap {
         return userMap.get(username);
     }
 
+    public String getMemberList() {
+        StringBuilder userListMessage = new StringBuilder();
+
+        userMap.forEach((key, value) -> {
+            String memberInfo = "user: " + key + " with ip: " + value.ipAddress() + ", and port: " + value.port() + "\n";
+            userListMessage.append(memberInfo);
+        });
+
+        return userListMessage.toString();
+    }
+
     public Integer size() {
         return userMap.size();
     }

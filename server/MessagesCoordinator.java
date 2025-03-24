@@ -3,14 +3,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-class MessagesList {
+class MessagesCoordinator {
     private final List<String> messages = Collections.synchronizedList(new ArrayList<>());
     private final List<MessageListener> listeners = new CopyOnWriteArrayList<>();
 
     public interface MessageListener {
         void onNewMessage(String message);
 
-        void onNewCommand(String command);
+        void onNewCommand(String requestIp, Integer requestPort, String command);
+
+        Boolean matchesAddress(String ip, Integer port);
 
         Boolean isCoordinator();
     }
@@ -30,13 +32,15 @@ class MessagesList {
         listeners.remove(listener);
     }
 
+    // sends the command to the thread handling the coordinator
     public void addCommand(String command, String ip, Integer port) {
 
         synchronized (messages) {
-            // The notify the coordinator of new command
             for (MessageListener listener : listeners) {
+                // The notify the coordinator of new command
                 if (listener.isCoordinator()) {
-                    listener.onNewCommand(command);
+                    System.out.println(listener.toString() + " is the handling coordinator");
+                    listener.onNewCommand(ip, port, command);
                 }
             }
         }
@@ -52,4 +56,20 @@ class MessagesList {
             }
         }
     }
+
+    public void sendMsgToIp(String ip, Integer port, String message) {
+        synchronized (messages) {
+            for (MessageListener listener : listeners) {
+                // Find the connection that matches the IP and port
+                if (listener instanceof Connection) {
+                    Connection connection = (Connection) listener;
+                    if (connection.matchesAddress(ip, port)) {
+                        connection.sendMessageWithPrefix("MSG-FROM-SERVER", message);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
 }
