@@ -80,6 +80,9 @@ class Client {
             Thread messagesHandlerThread = new Thread(messagesHandler);
             messagesHandlerThread.start();
 
+            String intructionsMsg = "Commands:\n/leave - leaves the chat\n/message targetUser 'your message' to private message someone\n/list or /members - to list all the members in the chat";
+            messagePrinter.printMessage(intructionsMsg);
+
             while (!socket.isClosed()) {
                 String message;
                 // System.out.print(client.getId() + ": ");
