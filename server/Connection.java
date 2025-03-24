@@ -28,6 +28,18 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
         return this.isCoordinator;
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getUserIp() {
+        return userIp;
+    }
+
+    public Integer getUserPort() {
+        return userPort;
+    }
+
     public void makeCoordinator() {
         this.isCoordinator = true;
         this.coordinator = new Coordinator(userList, messagesCoordinator);
@@ -53,7 +65,6 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
             handleUserCommands(username, userMsg);
 
         } else { // the message is broadcasted
-
             // messagesCoordinator automatically adds MSG-FROM-CHAT prefix
             messagesCoordinator.addMessage(username + ": " + userMsg);
         }
@@ -69,9 +80,9 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
             } catch (IOException err) {
                 System.out.println("error executing leave command" + err);
             }
-        } else if (userMsg.startsWith("/list")) {
-            System.out.println("handling list command");
-            // make coordinator handle command
+
+        } else if (userMsg.startsWith("/")) {
+            // make coordinator handle the rest of commands
             messagesCoordinator.addCommand("/list", userIp, userPort);
         }
 
@@ -112,9 +123,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
 
     // if this is the coordinator, this function handles commands from users
     public void onNewCommand(String requestIp, Integer requestPort, String command) {
-
         coordinator.handleCommand(requestIp, requestPort, command);
-
     }
 
     public void sendMessageWithPrefix(String prefix, String msg) {
@@ -185,6 +194,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
                 sendMessageWithPrefix("MSG-TO-COORDINATOR", "You are the coordinator");
             } else {
                 // tell this connection who the coordinator is
+                sendMessageWithPrefix("MSG-FROM-SERVER", messagesCoordinator.getCoordinatorInfo());
             }
 
             while (!socket.isClosed() && reader.hasNext()) {

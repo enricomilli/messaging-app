@@ -15,6 +15,9 @@ class MessagesCoordinator {
         Boolean matchesAddress(String ip, Integer port);
 
         Boolean isCoordinator();
+        String getUserId();
+        String getUserIp();
+        Integer getUserPort();
     }
 
     public void addListener(MessageListener listener) {
@@ -43,6 +46,20 @@ class MessagesCoordinator {
                     listener.onNewCommand(ip, port, command);
                 }
             }
+        }
+    }
+
+    public String getCoordinatorInfo() {
+
+        synchronized (messages) {
+            for (MessageListener listener : listeners) {
+                // The notify the coordinator of new command
+                if (listener.isCoordinator()) {
+                    return "Coordinator is: " + listener.getUserId() + " with ip: " + listener.getUserIp() + " and port: " + listener.getUserPort();
+                }
+            }
+
+            return "Error getting coordinator info";
         }
     }
 
