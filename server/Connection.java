@@ -49,9 +49,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
         return this.userIp.equals(ip) && this.userPort.equals(port);
     }
 
-
-    private void handleUserMessages(String msg)
-            throws IOException {
+    private void handleUserMessages(String msg) throws IOException {
 
         System.out.println("received user message: " + msg);
         String[] msgSplit = msg.split(": ");
@@ -83,7 +81,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
 
         } else if (userMsg.startsWith("/")) {
             // make coordinator handle the rest of commands
-            messagesCoordinator.addCommand("/list", userIp, userPort);
+            messagesCoordinator.addCommand(userMsg, userIp, userPort);
         }
 
     }
@@ -111,6 +109,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
 
     private void closeConnection() throws IOException {
         this.userList.removeUser(userId);
+        this.messagesCoordinator.removeListener(this);
         this.writer.close();
         this.reader.close();
         this.socket.close();
@@ -216,11 +215,14 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
 
             }
 
-            if (isCoordinator) {
-                System.out.println("need to get new coordinator");
+            messagesCoordinator.addMessage("[Server] " + userId + " has left the chat.");
+
+
+            if (isCoordinator && userList.size() > 0) {
+                System.out.println("getting new coordinator");
+                messagesCoordinator.findNewCoordinator();
             }
 
-            messagesCoordinator.addMessage("[Server] " + userId + " has left the chat.");
             closeConnection();
 
         } catch (IOException err) {

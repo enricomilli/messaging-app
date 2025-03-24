@@ -9,9 +9,8 @@ class MessagesCoordinator {
 
     public interface MessageListener {
         void onNewMessage(String message);
-
         void onNewCommand(String requestIp, Integer requestPort, String command);
-
+        void makeCoordinator();
         Boolean matchesAddress(String ip, Integer port);
 
         Boolean isCoordinator();
@@ -22,13 +21,6 @@ class MessagesCoordinator {
 
     public void addListener(MessageListener listener) {
         listeners.add(listener);
-
-        // Uncomment to send all the previous messages to joining clients
-        // synchronized (messages) {
-        // for (String message : messages) {
-        // listener.onNewMessage(message);
-        // }
-        // }
     }
 
     public void removeListener(MessageListener listener) {
@@ -42,7 +34,7 @@ class MessagesCoordinator {
             for (MessageListener listener : listeners) {
                 // The notify the coordinator of new command
                 if (listener.isCoordinator()) {
-                    System.out.println(listener.toString() + " is the handling coordinator");
+                    System.out.println(listener.getUserId() + " is the coordinator handling new command");
                     listener.onNewCommand(ip, port, command);
                 }
             }
@@ -63,6 +55,20 @@ class MessagesCoordinator {
         }
     }
 
+    public void findNewCoordinator() {
+
+        for (MessageListener listener : listeners) {
+            if (listener.isCoordinator()) continue;
+
+            // the first person who isn't a coordinator will become it
+            listener.makeCoordinator();
+            addMessage("the new coordinator is: " + listener.getUserId() + " with ip: " + listener.getUserIp() + " and port: " + listener.getUserPort());
+            return;
+        }
+
+        addMessage("could not get new coordinator");
+    }
+
     public void addMessage(String message) {
 
         synchronized (messages) {
@@ -71,6 +77,22 @@ class MessagesCoordinator {
             for (MessageListener listener : listeners) {
                 listener.onNewMessage(message);
             }
+        }
+    }
+
+    public String getUsernameByAddress(String ip, Integer port) {
+        synchronized (messages) {
+            for (MessageListener listener : listeners) {
+                // Find the connection that matches the IP and port
+                if (listener instanceof Connection) {
+                    Connection connection = (Connection) listener;
+                    if (connection.matchesAddress(ip, port)) {
+                        return connection.getUserId();
+                    }
+                }
+            }
+
+            return "username not found";
         }
     }
 
