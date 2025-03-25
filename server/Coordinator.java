@@ -84,8 +84,8 @@ class Coordinator {
             return;
         }
 
-        String finalMessage = "[Coordinator] Received private message from: " +
-                messagesCoordinator.getUsernameByAddress(requestIp, requestPort) + "\n" + msgContent;
+        String finalMessage = "Received private message:\n" +
+                messagesCoordinator.getUsernameByAddress(requestIp, requestPort) + ": " + msgContent + "\nEnd of message";
 
         messagesCoordinator.sendMsgToIp(targetUserInfo.ipAddress(), targetUserInfo.port(), finalMessage);
     }

@@ -104,7 +104,7 @@ class MessagesCoordinator {
                 if (listener instanceof Connection) {
                     Connection connection = (Connection) listener;
                     if (connection.matchesAddress(ip, port)) {
-                        connection.sendMessageWithPrefix("MSG-FROM-SERVER", message);
+                        connection.sendMessageWithPrefix("MSG-FROM-COORDINATOR", message);
                         break;
                     }
                 }

@@ -71,7 +71,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
     private void handleUserCommands(String username, String userMsg) {
         if (userMsg.startsWith("/leave")) {
             try {
-                sendMessageWithPrefix("MSG-FROM-SERVER", "bye, bye!");
+                sendMessageWithPrefix("MSG-FROM-SERVER", "[Server] bye, bye!");
                 closeConnection();
             } catch (IOException err) {
                 System.out.println("error executing leave command: " + err);
@@ -82,27 +82,28 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
         }
     }
 
+    // messages sent from the client directly, meaning automatic / from code without user input
+    // should be prefixed with client:
     private void handleClientMessages(String msg) {
         System.out.println("message from client received: " + msg);
         String[] splitMsg = msg.split(":");
         String command = splitMsg[0];
         String value = splitMsg[1];
 
-        if (command.equals("CHECK-USERNAME")) {
-            UserListMap.UserInfo existingUser = userList.getUser(value);
-            userList.print();
-            System.out.println("checking if username: " + value + " is taken");
-            if (existingUser == null) {
-                writer.println("available");
-            } else {
-                writer.println("not-available");
-            }
-        }
+        // just printing it out as we're not using it
+        System.out.println("Received command: " + command + " with values: " + value);
     }
 
     private void closeConnection() throws IOException {
         userList.removeUser(userId);
         messagesCoordinator.removeListener(this);
+
+        // If the coordinator disconnects, assign a new one
+        if (isCoordinator && userList.size() > 0) {
+            System.out.println("getting new coordinator");
+            messagesCoordinator.findNewCoordinator();
+        }
+
         writer.close();
         reader.close();
         socket.close();
@@ -197,12 +198,6 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
             }
 
             messagesCoordinator.addMessage("[Server] " + userId + " has left the chat.");
-
-            // If the coordinator disconnects, assign a new one
-            if (isCoordinator && userList.size() > 0) {
-                System.out.println("getting new coordinator");
-                messagesCoordinator.findNewCoordinator();
-            }
 
             closeConnection();
 

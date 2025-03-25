@@ -35,16 +35,18 @@ class MessagesHandler implements Runnable {
 
         } else if (msg.startsWith("MSG-FROM-COORDINATOR")) {
             // messages from the coordinator to a client
+            String serverMsg = msg.replaceFirst("MSG-FROM-COORDINATOR", "");
+            messagePrinter.printMessage("[Coordinator] " + serverMsg);
 
         } else if (msg.startsWith("MSG-TO-COORDINATOR")) {
             // messages only to the coordinator
             String serverMsg = msg.replaceFirst("MSG-TO-COORDINATOR", "");
-            messagePrinter.printMessage(serverMsg);
+            messagePrinter.printMessage("[Server] " + serverMsg);
 
         } else if (msg.startsWith("MSG-FROM-SERVER")) {
             // messages from the server
             String serverMsg = msg.replaceFirst("MSG-FROM-SERVER", "");
-            messagePrinter.printMessage(serverMsg);
+            messagePrinter.printMessage("[Server] " + serverMsg);
 
         } else {
             messagePrinter.printMessage(msg);
