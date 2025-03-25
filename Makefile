@@ -15,7 +15,6 @@ server: build-server
 
 build-client:
 	@javac -cp "$(CP_LIB)" client/*.java
-	@echo "Client built"
 
 client: build-client
 	@java -cp "client:$(CP_LIB)" Client $(ARGS)

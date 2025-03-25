@@ -1,23 +1,18 @@
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
-import sun.misc.Signal;
-import sun.misc.SignalHandler;
 import java.util.Scanner;
 
 class Client {
     private static final String MOVE_TO_LINE_START = "\r";
     private static final String CLEAR_LINE = "\033[2K";
 
-    private static void setUpKeymaps(Socket socket, PrintWriter writer, Scanner server) {
-        Signal.handle(new Signal("INT"), new SignalHandler() {
-            public void handle(Signal sig) {
-                System.out.println("\nExiting chat");
-
-                closeConnection(socket, server, writer);
-                System.exit(0);
-            }
-        });
+    // Handling controlc-c
+    private static void registerShutdownHook(Socket socket, PrintWriter writer, Scanner server) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("\nExiting chat...");
+            closeConnection(socket, server, writer);
+        }));
     }
 
     private static String checkUsernameAvailability(PrintWriter writer, Scanner server, MessagePrinter messagePrinter,
@@ -31,7 +26,6 @@ class Client {
         } else {
             return response;
         }
-
     }
 
     private static void closeConnection(Socket socket, Scanner server, PrintWriter writer) {
@@ -46,27 +40,26 @@ class Client {
 
     public static void main(String[] args) throws IOException {
         FlagHandler flagHandler = new FlagHandler(args);
-
         ClientConfig client = ClientConfig.build(flagHandler);
         if (client.getErrorMessage() != null) {
             System.out.println("Error occurred: \n" + client.getErrorMessage());
             return;
         }
-        // Use messagePrinter to keep the input in front of all messages
-        MessagePrinter messagePrinter = new MessagePrinter(client.getId());
 
-        messagePrinter.printMessage(
-                "Joining server at: " + client.getTargetIp() + ":" + client.getTargetPort() + " as " + client.getId());
+        MessagePrinter messagePrinter = new MessagePrinter(client.getId());
+        messagePrinter.printMessage("Joining server at: " + client.getTargetIp() + ":" + client.getTargetPort()
+                + " as " + client.getId());
+
+        // Declare connection resources outside the try, so they are available in the shutdown hook.
+        final Socket socket = new Socket(client.getTargetIp(), client.getTargetPort());
+        final PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+        final Scanner server = new Scanner(socket.getInputStream());
+        final Scanner input = new Scanner(System.in);
+
+        // Register the shutdown hook through our helper function.
+        registerShutdownHook(socket, writer, server);
 
         try {
-            Socket socket = new Socket(client.getTargetIp(), client.getTargetPort());
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            Scanner server = new Scanner(socket.getInputStream());
-            Scanner input = new Scanner(System.in);
-
-            // map ctrl-c for controled exit
-            setUpKeymaps(socket, writer, server);
-
             String usernameErr = checkUsernameAvailability(writer, server, messagePrinter, client.getId());
             if (usernameErr != null) {
                 System.out.println("error joining: " + usernameErr);
@@ -75,32 +68,25 @@ class Client {
                 return;
             }
 
-            // live messages chat
+            // Start the live chat messaging handler in its own thread.
             MessagesHandler messagesHandler = new MessagesHandler(socket, server, client, messagePrinter);
             Thread messagesHandlerThread = new Thread(messagesHandler);
             messagesHandlerThread.start();
 
-            String intructionsMsg = "Commands:\n/leave - leaves the chat\n/message targetUser 'your message' to private message someone\n/list or /members - to list all the members in the chat";
-            messagePrinter.printMessage(intructionsMsg);
+            String instructionsMsg = "Available Commands:\n/leave - leaves the chat\n/message targetUser 'your message' "
+                    + "to private message someone\n/list or /members - to list all the members in the chat";
+            messagePrinter.printMessage(instructionsMsg);
 
             while (!socket.isClosed()) {
-                String message;
-                // System.out.print(client.getId() + ": ");
-                messagePrinter.printMessage("\033[A");
-
-                // waits here till user presses enter
-                message = input.nextLine();
+                messagePrinter.printMessage("\033[A");  // Move cursor up to keep input in front.
+                String message = input.nextLine();
                 if (message != null && !message.trim().isEmpty()) {
-                    // Clear the input line
                     System.out.print(MOVE_TO_LINE_START + CLEAR_LINE);
-
-                    // send message to the server
                     writer.println("user:" + client.getId() + ": " + message);
                 } else {
                     messagePrinter.printMessage("make sure you write something!");
                     System.out.print(MOVE_TO_LINE_START + CLEAR_LINE);
                 }
-
             }
 
             closeConnection(socket, server, writer);
