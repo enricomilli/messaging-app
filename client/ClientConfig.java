@@ -42,7 +42,7 @@ class ClientConfig {
         } else {
             // generate unique id here
             id = UUID.randomUUID().toString();
-            System.out.println("user id randomly assigned: " + id);
+            System.out.println("your user id was randomly assigned: " + id);
         }
 
         if (!errorMessage.isEmpty()) {

@@ -1,15 +1,47 @@
-
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.List;
 
 class Coordinator {
     private UserListMap userList;
     private MessagesCoordinator messagesCoordinator;
-
+    private Timer heartbeatTimer;
 
     public Coordinator(UserListMap userList, MessagesCoordinator messagesCoordinator) {
         this.userList = userList;
         this.messagesCoordinator = messagesCoordinator;
+        startHeartbeat();
     }
 
+    // Start a periodic check every 20 seconds to check on users
+    private void startHeartbeat() {
+        heartbeatTimer = new Timer(true); // true makes it run on a separate thread
+        heartbeatTimer.scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+                // Get a snapshot of the listeners from the MessagesCoordinator
+                List<MessagesCoordinator.MessageListener> listeners = messagesCoordinator.getListeners();
+                for (MessagesCoordinator.MessageListener listener : listeners) {
+                    // Skip the coordinator itself
+                    if (listener.isCoordinator()) continue;
+                    // If the listener is not alive, remove it
+                    if (!listener.isAlive()) {
+                        String uid = listener.getUserId();
+                        userList.removeUser(uid);
+                        messagesCoordinator.removeListener(listener);
+                        messagesCoordinator.addMessage("[Server] " + uid + " removed due to connectivity issues.");
+                    }
+                }
+            }
+        }, 20000, 20000); // Initial delay 20 sec, period 20 sec
+    }
+
+    public void stopHeartbeat() {
+        if (heartbeatTimer != null) {
+            heartbeatTimer.cancel();
+        }
+    }
+
+    // Handle incoming commands from members
     public String handleCommand(String requestIp, Integer requestPort, String command) {
 
         if (command.startsWith("/members") || command.startsWith("/list")) {
@@ -24,25 +56,25 @@ class Coordinator {
         return null;
     }
 
-    // First arguement after the command is the userId whos receiving the message
+    // Format: /message targetUser message
     private void handleSendPrivateMessage(String requestIp, Integer requestPort, String command) {
 
-        // command format: /message targetUser message
         String[] splitCmd = command.split(" ", 3);
         if (splitCmd.length < 3) {
-            messagesCoordinator.sendMsgToIp(requestIp, requestPort, "[Coordinator] Error in message formating\nIt should follow this format: /message targetUser your message here");
+            messagesCoordinator.sendMsgToIp(requestIp, requestPort,
+                "[Coordinator] Error in message formatting. It should follow this format: /message targetUser your message here");
             return;
         }
 
         String receivingUserId = splitCmd[1];
-        if (receivingUserId == null || receivingUserId.trim() == "") {
+        if (receivingUserId == null || receivingUserId.trim().isEmpty()) {
             messagesCoordinator.sendMsgToIp(requestIp, requestPort, "[Coordinator] Target username is empty");
             return;
         }
 
         String msgContent = splitCmd[2];
-        if (msgContent == null || msgContent.trim() == "") {
-            messagesCoordinator.sendMsgToIp(requestIp, requestPort, "[Coordinator] message is empty");
+        if (msgContent == null || msgContent.trim().isEmpty()) {
+            messagesCoordinator.sendMsgToIp(requestIp, requestPort, "[Coordinator] Message is empty");
             return;
         }
 
@@ -52,7 +84,8 @@ class Coordinator {
             return;
         }
 
-        String finalMessage = "[Coordinator] Received private message from: " + messagesCoordinator.getUsernameByAddress(requestIp, requestPort) + "\n" + msgContent;
+        String finalMessage = "[Coordinator] Received private message from: " +
+                messagesCoordinator.getUsernameByAddress(requestIp, requestPort) + "\n" + msgContent;
 
         messagesCoordinator.sendMsgToIp(targetUserInfo.ipAddress(), targetUserInfo.port(), finalMessage);
     }
@@ -61,5 +94,4 @@ class Coordinator {
         String msgToWrite = userList.getMemberList();
         messagesCoordinator.sendMsgToIp(requestIp, requestPort, msgToWrite);
     }
-
 }

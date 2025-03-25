@@ -49,8 +49,11 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
         return this.userIp.equals(ip) && this.userPort.equals(port);
     }
 
-    private void handleUserMessages(String msg) throws IOException {
+    public boolean isAlive() {
+        return !socket.isClosed();
+    }
 
+    private void handleUserMessages(String msg) throws IOException {
         System.out.println("received user message: " + msg);
         String[] msgSplit = msg.split(": ");
         String username = msgSplit[0];
@@ -58,32 +61,25 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
 
         if (userMsg.isEmpty()) {
             writer.println("make sure you write something!");
-
         } else if (userMsg.startsWith("/")) { // User commands
             handleUserCommands(username, userMsg);
-
-        } else { // the message is broadcasted
-            // messagesCoordinator automatically adds MSG-FROM-CHAT prefix
+        } else { // The message is broadcasted
             messagesCoordinator.addMessage(username + ": " + userMsg);
         }
-
     }
 
     private void handleUserCommands(String username, String userMsg) {
-
         if (userMsg.startsWith("/leave")) {
             try {
                 sendMessageWithPrefix("MSG-FROM-SERVER", "bye, bye!");
                 closeConnection();
             } catch (IOException err) {
-                System.out.println("error executing leave command" + err);
+                System.out.println("error executing leave command: " + err);
             }
-
         } else if (userMsg.startsWith("/")) {
-            // make coordinator handle the rest of commands
+            // Let the coordinator handle the command
             messagesCoordinator.addCommand(userMsg, userIp, userPort);
         }
-
     }
 
     private void handleClientMessages(String msg) {
@@ -93,34 +89,31 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
         String value = splitMsg[1];
 
         if (command.equals("CHECK-USERNAME")) {
-            UserListMap.UserInfo exisitingUser = userList.getUser(value);
+            UserListMap.UserInfo existingUser = userList.getUser(value);
             userList.print();
-
             System.out.println("checking if username: " + value + " is taken");
-            if (exisitingUser == null) {
+            if (existingUser == null) {
                 writer.println("available");
-
             } else {
                 writer.println("not-available");
             }
         }
-
     }
 
     private void closeConnection() throws IOException {
-        this.userList.removeUser(userId);
-        this.messagesCoordinator.removeListener(this);
-        this.writer.close();
-        this.reader.close();
-        this.socket.close();
+        userList.removeUser(userId);
+        messagesCoordinator.removeListener(this);
+        writer.close();
+        reader.close();
+        socket.close();
     }
 
-    // when there is a new message added to the list send it to the client
+    // When there is a new message added to the list, send it to the client
     public void onNewMessage(String message) {
         sendMessageWithPrefix("MSG-FROM-CHAT", message);
     }
 
-    // if this is the coordinator, this function handles commands from users
+    // If this is the coordinator, this function handles commands from users
     public void onNewCommand(String requestIp, Integer requestPort, String command) {
         coordinator.handleCommand(requestIp, requestPort, command);
     }
@@ -134,8 +127,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
             return "socket is closed";
         }
 
-        // step 1:
-        // check the username
+        // Step 1: Check the username
         String usernameCheckMsg = reader.nextLine();
         String[] checkMsgParts = usernameCheckMsg.split(":", 3);
         if (checkMsgParts.length < 3) {
@@ -153,38 +145,32 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
 
         userId = username;
 
-        // step 2:
-        // get client details
+        // Step 2: Get client details
         String ipAddr = socket.getInetAddress().getHostAddress();
         Integer port = socket.getPort();
-
         this.userPort = port;
         this.userIp = ipAddr;
 
-        // check if coordinator
-        if (userList.size() < 1) { // if there are no users in the list, its the first person to join
+        // If there are no users, make this connection the coordinator
+        if (userList.size() < 1) {
             this.makeCoordinator();
         }
 
-        // step 3:
-        // add to the user list
+        // Step 3: Add user to list
         userList.addUser(username, ipAddr, port, this.isCoordinator);
-
         return null;
     }
 
     public void run() {
         try {
             messagesCoordinator.addListener(this);
-
             String newUserErr = handleNewUser();
             if (newUserErr != null) {
                 writer.println(newUserErr);
                 closeConnection();
                 return;
             }
-
-            // confirm with client this user can join
+            // Confirm with client that the user can join
             writer.println("confirmation");
 
             messagesCoordinator.addMessage("[Server] " + userId + " has joined the chat.");
@@ -197,27 +183,22 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
             }
 
             while (!socket.isClosed() && reader.hasNext()) {
-
                 String messageLine = reader.nextLine().trim();
-
                 String[] splitMessage = messageLine.split(":", 2);
                 String sender = splitMessage[0];
 
                 if (sender.equals("user")) {
                     handleUserMessages(splitMessage[1]);
-
                 } else if (sender.equals("client")) {
                     handleClientMessages(splitMessage[1]);
-
                 } else {
-                    System.out.println("unknown sender:" + messageLine);
+                    System.out.println("unknown sender: " + messageLine);
                 }
-
             }
 
             messagesCoordinator.addMessage("[Server] " + userId + " has left the chat.");
 
-
+            // If the coordinator disconnects, assign a new one
             if (isCoordinator && userList.size() > 0) {
                 System.out.println("getting new coordinator");
                 messagesCoordinator.findNewCoordinator();
@@ -226,8 +207,8 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
             closeConnection();
 
         } catch (IOException err) {
-            System.err.println("error with client connection:" + err);
+            System.err.println("error with client connection: " + err);
         }
     }
-
 }
+

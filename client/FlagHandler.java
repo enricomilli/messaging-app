@@ -12,7 +12,7 @@ class FlagHandler {
 
     private HashMap<String, String> parseFlags(String[] args) {
         Integer totalArgs = args.length;
-        HashMap<String, String> parsedArgs = new HashMap<String, String>();
+        HashMap<String, String> parsedArgs = new HashMap<>();
 
         for (int i = 0; i < totalArgs; i++) {
 
@@ -29,9 +29,8 @@ class FlagHandler {
                     parsedArgs.put(flagName, args[i + 1]);
                     i++;
 
-                } else { // For flags that dont need a value
+                } else { // For flags that don’t need a value
                     parsedArgs.put(flagName, "true");
-
                 }
 
             } else if (arg.startsWith("-")) {
@@ -53,7 +52,7 @@ class FlagHandler {
     }
 
     private HashMap<String, String> createFlagPairs() {
-        HashMap<String, String> pairs = new HashMap<String, String>();
+        HashMap<String, String> pairs = new HashMap<>();
 
         pairs.put("id", "i");
         pairs.put("i", "id");
@@ -68,58 +67,34 @@ class FlagHandler {
     }
 
     public Boolean hasFlag(String flag) {
-        String option1 = flag;
-        if (argsFound.containsKey(option1) == true) {
+        if (argsFound.containsKey(flag)) {
             return true;
         }
-
-        String option2 = flagPairs.get(flag);
-        if (option2 != null) {
-            return argsFound.containsKey(option2);
+        String alias = flagPairs.get(flag);
+        if (alias != null) {
+            return argsFound.containsKey(alias);
         }
-
         return false;
     }
 
     /**
-     * This function accepts the shorthand or longhand from of a flag and returns
-     * the inputed value whether it was inputed as long or shorthand
-     * 
-     * @return The value the user inputed for the flag
+     * This function accepts the shorthand or longhand form of a flag and returns
+     * the input value whether it was input as long or shorthand.
+     *
+     * @return The value the user input for the flag, or null if not found.
      */
     public String getValue(String flag) {
-
-        // option1 try to get the arg with the value passed in
-        String option1 = argsFound.get(flag);
-        if (option1 != null) {
-            return argsFound.get(option1);
+        // Try the flag as provided
+        if (argsFound.containsKey(flag)) {
+            return argsFound.get(flag);
         }
 
-        // option2 get the other pair of the flag incase it was inputed that way
-        String option2 = flagPairs.get(flag);
-        if (option2 != null) {
-            return argsFound.get(option2);
+        // If not found, try its alias
+        String alias = flagPairs.get(flag);
+        if (alias != null && argsFound.containsKey(alias)) {
+            return argsFound.get(alias);
         }
-
         return null;
     }
 
-    public static void main(String[] args) {
-        // testing
-        String[] testArgs = { "--verbose", "--output-file=report.txt", "-d", "debug_level", "--no-color", "--count",
-                "10", "-v" };
-        FlagHandler handler = new FlagHandler(testArgs);
-
-        System.out.println("Has flag 'verbose': " + handler.hasFlag("verbose"));
-        System.out.println("Value of 'output-file': " + handler.getValue("output-file"));
-        System.out.println("Has flag 'd': " + handler.hasFlag("d"));
-        System.out.println("Value of 'd': " + handler.getValue("d"));
-        System.out.println("Has flag 'color': " + handler.hasFlag("color")); // Testing --no-color
-        System.out.println("Value of 'color': " + handler.getValue("color")); // Testing --no-color
-        System.out.println("Has flag 'count': " + handler.hasFlag("count"));
-        System.out.println("Value of 'count': " + handler.getValue("count"));
-        System.out.println("Has flag 'v': " + handler.hasFlag("v"));
-        System.out.println("Value of 'v': " + handler.getValue("v"));
-
-    }
 }
