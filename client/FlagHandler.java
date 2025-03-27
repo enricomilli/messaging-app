@@ -84,7 +84,7 @@ class FlagHandler {
      * @return The value the user input for the flag, or null if not found.
      */
     public String getValue(String flag) {
-        // Try the flag as provided
+        // The arg passed in
         if (argsFound.containsKey(flag)) {
             return argsFound.get(flag);
         }

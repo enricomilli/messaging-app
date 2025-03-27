@@ -1,18 +1,15 @@
 import java.util.concurrent.ConcurrentHashMap;
 
 class UserListMap {
-    // Custom record for IP and Port (Immutable)
+
     public record UserInfo(String ipAddress, int port, Boolean isCoordinator) {
     }
 
-    // Thread-safe map with custom value object
+    // Thread-safe map
     private final ConcurrentHashMap<String, UserInfo> userMap = new ConcurrentHashMap<>();
 
     public void addUser(String username, String ip, Integer port, Boolean isCoordinator) {
         userMap.put(username, new UserInfo(ip, port, isCoordinator));
-
-        // print();
-        // System.out.println("size of list: " + size());
     }
 
     public UserInfo removeUser(String username) {
@@ -31,7 +28,8 @@ class UserListMap {
         StringBuilder userListMessage = new StringBuilder();
 
         userMap.forEach((key, value) -> {
-            String memberInfo = "user: " + key + " with ip: " + value.ipAddress() + ", and port: " + value.port() + "\n";
+            String memberInfo = "user: " + key + " with ip: " + value.ipAddress() + ", and port: " + value.port()
+                    + "\n";
             userListMessage.append(memberInfo);
         });
 

@@ -50,13 +50,12 @@ class Client {
         messagePrinter.printMessage("Joining server at: " + client.getTargetIp() + ":" + client.getTargetPort()
                 + " as " + client.getId());
 
-        // Declare connection resources outside the try, so they are available in the shutdown hook.
         final Socket socket = new Socket(client.getTargetIp(), client.getTargetPort());
         final PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
         final Scanner server = new Scanner(socket.getInputStream());
         final Scanner input = new Scanner(System.in);
 
-        // Register the shutdown hook through our helper function.
+        // This function runs when user pressed Control-C
         registerShutdownHook(socket, writer, server);
 
         try {
@@ -78,7 +77,7 @@ class Client {
             messagePrinter.printMessage(instructionsMsg);
 
             while (!socket.isClosed()) {
-                messagePrinter.printMessage("\033[A");  // Move cursor up to keep input in front.
+                messagePrinter.printMessage("\033[A"); // Move cursor up to keep input in front.
                 String message = input.nextLine();
                 if (message != null && !message.trim().isEmpty()) {
                     System.out.print(MOVE_TO_LINE_START + CLEAR_LINE);

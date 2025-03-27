@@ -18,11 +18,12 @@ class Coordinator {
         heartbeatTimer = new Timer(true); // true makes it run on a separate thread
         heartbeatTimer.scheduleAtFixedRate(new TimerTask() {
             public void run() {
-                // Get a snapshot of the listeners from the MessagesCoordinator
+
                 List<MessagesCoordinator.MessageListener> listeners = messagesCoordinator.getListeners();
                 for (MessagesCoordinator.MessageListener listener : listeners) {
-                    // Skip the coordinator itself
+                    // Skip the coordinator
                     if (listener.isCoordinator()) continue;
+
                     // If the listener is not alive, remove it
                     if (!listener.isAlive()) {
                         String uid = listener.getUserId();
@@ -32,7 +33,7 @@ class Coordinator {
                     }
                 }
             }
-        }, 20000, 20000); // Initial delay 20 sec, period 20 sec
+        }, 20000, 20000); // Delay 20 sec, period 20 sec
     }
 
     public void stopHeartbeat() {

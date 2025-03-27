@@ -7,7 +7,6 @@ class MessagesCoordinator {
     private final List<String> messages = Collections.synchronizedList(new ArrayList<>());
     private final List<MessageListener> listeners = new CopyOnWriteArrayList<>();
 
-    // Modified MessageListener interface (implements observer pattern)
     public interface MessageListener {
         void onNewMessage(String message);
         void onNewCommand(String requestIp, Integer requestPort, String command);

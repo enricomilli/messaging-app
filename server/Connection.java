@@ -82,7 +82,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
         }
     }
 
-    // messages sent from the client directly, meaning automatic / from code without user input
+    // Messages sent from the client directly, meaning automatic / from code without user input
     // should be prefixed with client:
     private void handleClientMessages(String msg) {
         System.out.println("message from client received: " + msg);
@@ -90,7 +90,7 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
         String command = splitMsg[0];
         String value = splitMsg[1];
 
-        // just printing it out as we're not using it
+        // just printing it out as we're no longer using it
         System.out.println("Received command: " + command + " with values: " + value);
     }
 

@@ -29,10 +29,6 @@ class MessagesHandler implements Runnable {
 
             messagePrinter.printMessage(newUserMsg);
 
-        } else if (msg.startsWith("MSG-FROM-USER")) {
-            // private message from a user goes here
-            messagePrinter.printMessage("Private messaged received from username: message");
-
         } else if (msg.startsWith("MSG-FROM-COORDINATOR")) {
             // messages from the coordinator to a client
             String serverMsg = msg.replaceFirst("MSG-FROM-COORDINATOR", "");
