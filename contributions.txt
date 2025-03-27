@@ -1,0 +1,7 @@
+Name: StudentID = Contribution %
+
+James Hoang: 1435086 = 25%
+Abdulmalik Jinadu: 1320325 = 15%
+Enrico Milli Dominguez: 1248837 = 35%
+Armand Omar: 1337399 = 25%
+
