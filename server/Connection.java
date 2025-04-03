@@ -165,12 +165,14 @@ public class Connection implements Runnable, MessagesCoordinator.MessageListener
     public void run() {
         try {
             messagesCoordinator.addListener(this);
+
             String newUserErr = handleNewUser();
             if (newUserErr != null) {
                 writer.println(newUserErr);
                 closeConnection();
                 return;
             }
+
             // Confirm with client that the user can join
             writer.println("confirmation");
 
